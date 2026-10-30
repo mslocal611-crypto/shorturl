@@ -3,14 +3,14 @@ package service
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"net/url"
 
+	"github.com/mslocal611-crypto/shorturl/internal/errors"
 	"github.com/mslocal611-crypto/shorturl/internal/model"
 )
 
 type Repository interface {
-	Save(url model.URL)
+	Save(url model.URL) error
 	Load(code string) (string, error)
 }
 
@@ -24,11 +24,14 @@ func New(repo Repository) *Service {
 
 func (s *Service) Put(url string) (string, error) {
 	if !validate(url) {
-		return "", errors.New("параметр url должен быть валидным http адресом")
+		return "", errors.ErrInvalidURL
 	}
 
 	code := encode(url)
-	s.repo.Save(model.URL{Original: url, Code: code})
+	err := s.repo.Save(model.URL{Original: url, Code: code})
+	if err != nil {
+		return "", errors.ErrInternal
+	}
 
 	return code, nil
 }

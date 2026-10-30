@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/mslocal611-crypto/shorturl/internal/errors"
 	"github.com/mslocal611-crypto/shorturl/internal/service"
 )
 
@@ -37,13 +38,13 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Redirect(w http.ResponseWriter, r *http.Request) {
 	code := r.PathValue("shortUrl")
 	if code == "" {
-		http.Error(w, "Не указан код для поиска оригинального url", http.StatusBadRequest)
+		http.Error(w, errors.ErrInvalidURL.Error(), http.StatusBadRequest)
 		return
 	}
 
 	original, err := h.service.Get(code)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 

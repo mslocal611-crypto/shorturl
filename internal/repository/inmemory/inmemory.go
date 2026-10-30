@@ -1,8 +1,7 @@
 package inmemory
 
 import (
-	"errors"
-
+	"github.com/mslocal611-crypto/shorturl/internal/errors"
 	"github.com/mslocal611-crypto/shorturl/internal/model"
 )
 
@@ -16,14 +15,16 @@ func New() *Memory {
 	}
 }
 
-func (m *Memory) Save(link model.URL) {
+func (m *Memory) Save(link model.URL) error {
 	m.urlMap[link.Code] = link.Original
+
+	return nil
 }
 
 func (m *Memory) Load(code string) (string, error) {
 	original, ok := m.urlMap[code]
 	if !ok {
-		return "", errors.New("ссылка не найдена")
+		return "", errors.ErrNotFound
 	}
 
 	return original, nil
