@@ -1,6 +1,8 @@
 package inmemory
 
 import (
+	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/mslocal611-crypto/shorturl/internal/errors"
@@ -25,4 +27,32 @@ func TestMemory(t *testing.T) {
 	got, err = store.Load(link.Code)
 	assert.NoError(t, err)
 	assert.Equal(t, link.Original, got)
+}
+
+func TestMemory_Concurrent(t *testing.T) {
+	store := New()
+
+	workerCount := 100
+	wg := sync.WaitGroup{}
+	wg.Add(workerCount)
+
+	for i := 0; i < workerCount; i++ {
+		go func() {
+			defer wg.Done()
+
+			link := model.URL{
+				Original: fmt.Sprintf("https://example.com/%d", i),
+				Code:     fmt.Sprintf("code%d", i),
+			}
+
+			err := store.Save(link)
+			assert.NoError(t, err)
+
+			got, err := store.Load(link.Code)
+			assert.NoError(t, err)
+			assert.Equal(t, link.Original, got)
+		}()
+	}
+
+	wg.Wait()
 }
