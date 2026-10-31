@@ -3,18 +3,21 @@ package handler
 import (
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/mslocal611-crypto/shorturl/internal/repository/inmemory"
 	"github.com/mslocal611-crypto/shorturl/internal/service"
 )
 
-func Route() *http.ServeMux {
-	mux := http.NewServeMux()
+func Route(baseURL string) http.Handler {
+	router := chi.NewRouter()
 
-	service := service.New(inmemory.New())
-	handler := New(service)
+	router.Use(middleware.Logger)
 
-	mux.HandleFunc("POST /", handler.Shorten)
-	mux.HandleFunc("GET /{shortUrl}", handler.Redirect)
+	handler := New(service.New(inmemory.New()), baseURL)
 
-	return mux
+	router.Post("/", handler.Shorten)
+	router.Get("/{shortUrl}", handler.Redirect)
+
+	return router
 }

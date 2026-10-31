@@ -14,6 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testBaseURL = "http://localhost:8080"
+
 func TestHandler_Shorten(t *testing.T) {
 	original := "http://example.com"
 	code, err := service.New(inmemory.New()).Put(original)
@@ -31,7 +33,7 @@ func TestHandler_Shorten(t *testing.T) {
 			body:            url.Values{"url": {original}}.Encode(),
 			wantStatusCode:  http.StatusCreated,
 			wantContentType: "text/plain",
-			wantBody:        fmt.Sprintf("http://localhost:8080/%s", code),
+			wantBody:        fmt.Sprintf("%s/%s", testBaseURL, code),
 		},
 		{
 			name:           "invalid url",
@@ -59,7 +61,7 @@ func TestHandler_Shorten(t *testing.T) {
 
 			writer := httptest.NewRecorder()
 
-			New(srvc).Shorten(writer, request)
+			New(srvc, testBaseURL).Shorten(writer, request)
 
 			assert.Equal(t, test.wantStatusCode, writer.Code)
 
@@ -103,7 +105,7 @@ func TestHandler_Redirect(t *testing.T) {
 
 			writer := httptest.NewRecorder()
 
-			New(srvc).Redirect(writer, request)
+			New(srvc, testBaseURL).Redirect(writer, request)
 
 			assert.Equal(t, tt.wantCode, writer.Code)
 			assert.Equal(t, tt.original, writer.Header().Get("Location"))

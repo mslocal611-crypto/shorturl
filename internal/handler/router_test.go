@@ -11,7 +11,7 @@ import (
 )
 
 func TestRoute(t *testing.T) {
-	mux := Route()
+	mux := Route(testBaseURL)
 	assert.NotNil(t, mux)
 
 	request := httptest.NewRequest(http.MethodGet, "/missing", nil)
