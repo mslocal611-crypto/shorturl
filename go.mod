@@ -1,6 +1,6 @@
 module github.com/mslocal611-crypto/shorturl
 
-go 1.27.2
+go 1.27.0
 
 require (
 	github.com/go-chi/chi/v5 v5.5.0
