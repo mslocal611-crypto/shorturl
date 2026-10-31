@@ -7,13 +7,24 @@ import (
 )
 
 func TestLoad(t *testing.T) {
-	host := "localhost"
-	port := "8080"
+	serverAddress := "localhost:8080"
+	baseURL := "http://localhost:8080"
 
-	t.Setenv("HOST", host)
-	t.Setenv("PORT", port)
+	t.Setenv("SERVER_ADDRESS", serverAddress)
+	t.Setenv("BASE_URL", baseURL)
 
-	cfg := Load()
-	assert.Equal(t, host, cfg.Host)
-	assert.Equal(t, port, cfg.Port)
+	cfg, err := Load([]string{})
+
+	assert.NoError(t, err)
+	assert.Equal(t, serverAddress, cfg.HTTPAddr)
+	assert.Equal(t, baseURL, cfg.BaseURL)
+
+	serverAddress = "localhost:8081"
+	baseURL = "http://localhost:8081"
+
+	cfg, err = Load([]string{"-a", serverAddress, "-b", baseURL})
+
+	assert.NoError(t, err)
+	assert.Equal(t, serverAddress, cfg.HTTPAddr)
+	assert.Equal(t, baseURL, cfg.BaseURL)
 }
