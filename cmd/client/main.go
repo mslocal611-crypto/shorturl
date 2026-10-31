@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 
 	"github.com/go-resty/resty/v2"
 )
@@ -24,10 +23,8 @@ func main() {
 		fmt.Println("--------------------------------")
 		fmt.Println("Получение короткой ссылки для ", link+" ...")
 		response, err := client.R().
-			SetHeader("Content-Type", "application/x-www-form-urlencoded").
-			SetBody(
-				url.Values{"url": {link}}.Encode(),
-			).
+			SetHeader("Content-Type", "text/plain").
+			SetBody(link).
 			Post(endpoint)
 		if err != nil {
 			fmt.Println("Ошибка: ", err)

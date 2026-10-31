@@ -2,8 +2,10 @@ package handler
 
 import (
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/mslocal611-crypto/shorturl/internal/errors"
 	"github.com/mslocal611-crypto/shorturl/internal/service"
@@ -19,7 +21,13 @@ func New(service *service.Service, baseURL string) *Handler {
 }
 
 func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
-	original := r.FormValue("url")
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		slog.Error("failed to read body", "error", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	original := strings.TrimSpace(string(body))
 
 	code, err := h.service.Put(original)
 	if err != nil {

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"strings"
 	"testing"
 
@@ -29,25 +28,20 @@ func TestHandler_Shorten(t *testing.T) {
 		wantBody        string
 	}{
 		{
-			name:            "valid form",
-			body:            url.Values{"url": {original}}.Encode(),
+			name:            "valid url",
+			body:            original,
 			wantStatusCode:  http.StatusCreated,
 			wantContentType: "text/plain",
 			wantBody:        fmt.Sprintf("%s/%s", testBaseURL, code),
 		},
 		{
 			name:           "invalid url",
-			body:           url.Values{"url": {"ftp://example.com/path/to/file"}}.Encode(),
-			wantStatusCode: http.StatusBadRequest,
-		},
-		{
-			name:           "invalid form",
-			body:           url.Values{}.Encode(),
+			body:           "ftp://example.com/path/to/file",
 			wantStatusCode: http.StatusBadRequest,
 		},
 		{
 			name:           "empty url",
-			body:           url.Values{"url": {""}}.Encode(),
+			body:           "",
 			wantStatusCode: http.StatusBadRequest,
 		},
 	}
@@ -57,7 +51,7 @@ func TestHandler_Shorten(t *testing.T) {
 			srvc := service.New(inmemory.New())
 
 			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(test.body))
-			request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			request.Header.Set("Content-Type", "text/plain")
 
 			writer := httptest.NewRecorder()
 
