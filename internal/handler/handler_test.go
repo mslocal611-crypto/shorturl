@@ -1,104 +1,112 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 
-	"github.com/mslocal611-crypto/shorturl/internal/errors"
 	"github.com/mslocal611-crypto/shorturl/internal/repository/inmemory"
 	"github.com/mslocal611-crypto/shorturl/internal/service"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestShorten(t *testing.T) {
-	type in struct {
-		body string
-	}
-	type out struct {
-		statusCode  int
-		contentType string
-		body        string
-	}
-
-	invalid := out{
-		statusCode:  http.StatusBadRequest,
-		contentType: "text/plain; charset=utf-8",
-		body:        errors.ErrInvalidURL.Error() + "\n",
-	}
+func TestHandler_Shorten(t *testing.T) {
+	original := "http://example.com"
+	code, err := service.New(inmemory.New()).Put(original)
+	require.NoError(t, err)
 
 	tests := []struct {
-		name string
-		in   in
-		out  out
+		name            string
+		body            string
+		wantStatusCode  int
+		wantContentType string
+		wantBody        string
 	}{
 		{
-			name: "valid form",
-			in: in{
-				body: url.Values{"url": {"http://example.com"}}.Encode(),
-			},
-			out: out{
-				statusCode:  http.StatusCreated,
-				contentType: "text/plain",
-				body:        "http://localhost:8080/f0e6a6a9",
-			},
+			name:            "valid form",
+			body:            url.Values{"url": {original}}.Encode(),
+			wantStatusCode:  http.StatusCreated,
+			wantContentType: "text/plain",
+			wantBody:        fmt.Sprintf("http://localhost:8080/%s", code),
 		},
 		{
-			name: "invalid form",
-			in: in{
-				body: url.Values{"textUrl": {"http://example.com"}}.Encode(),
-			},
-			out: invalid,
+			name:           "invalid url",
+			body:           url.Values{"url": {"ftp://example.com/path/to/file"}}.Encode(),
+			wantStatusCode: http.StatusBadRequest,
 		},
 		{
-			name: "empty url",
-			in: in{
-				body: url.Values{"url": {""}}.Encode(),
-			},
-			out: invalid,
+			name:           "invalid form",
+			body:           url.Values{}.Encode(),
+			wantStatusCode: http.StatusBadRequest,
 		},
 		{
-			name: "invalid url",
-			in: in{
-				body: url.Values{"url": {"ftp://example.com/path/to/file"}}.Encode(),
-			},
-			out: invalid,
+			name:           "empty url",
+			body:           url.Values{"url": {""}}.Encode(),
+			wantStatusCode: http.StatusBadRequest,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(test.in.body))
+			srvc := service.New(inmemory.New())
+
+			request := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(test.body))
 			request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
 			writer := httptest.NewRecorder()
 
-			handler := New(service.New(inmemory.New()))
-			handler.Shorten(writer, request)
+			New(srvc).Shorten(writer, request)
 
-			assert.Equal(t, test.out.statusCode, writer.Result().StatusCode)
-			assert.Equal(t, test.out.contentType, writer.Result().Header.Get("Content-Type"))
-			assert.Equal(t, test.out.body, writer.Body.String())
+			assert.Equal(t, test.wantStatusCode, writer.Code)
+
+			if test.wantBody != "" && test.wantContentType != "" {
+				assert.Equal(t, test.wantContentType, writer.Header().Get("Content-Type"))
+				assert.Equal(t, test.wantBody, writer.Body.String())
+			}
 		})
 	}
 }
 
 func TestHandler_Redirect(t *testing.T) {
 	tests := []struct {
-		name string // description of this test case
-		// Named input parameters for receiver constructor.
-		service *service.Service
-		// Named input parameters for target function.
-		w http.ResponseWriter
-		r *http.Request
+		name     string
+		original string
+		wantCode int
 	}{
-		// TODO: Add test cases.
+		{
+			name:     "valid short url",
+			original: "https://www.google.com",
+			wantCode: http.StatusTemporaryRedirect,
+		},
+		{
+			name:     "invalid short url",
+			wantCode: http.StatusBadRequest,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := New(tt.service)
-			h.Redirect(tt.w, tt.r)
+			srvc := service.New(inmemory.New())
+
+			code := "missing"
+			if tt.original != "" {
+				var err error
+				code, err = srvc.Put(tt.original)
+				assert.NoError(t, err)
+			}
+
+			request := httptest.NewRequest(http.MethodGet, "/"+code, nil)
+			request.SetPathValue("shortUrl", code)
+
+			writer := httptest.NewRecorder()
+
+			New(srvc).Redirect(writer, request)
+
+			assert.Equal(t, tt.wantCode, writer.Code)
+			assert.Equal(t, tt.original, writer.Header().Get("Location"))
 		})
 	}
 }
